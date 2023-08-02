@@ -3,8 +3,8 @@
 namespace Mirhamzah\LaravelInteractiveMake;
 
 use Illuminate\Support\ServiceProvider;
-use Mirhamzah\LaravelInteractiveMake\IModelMakeCommand;
-use Mirhamzah\LaravelInteractiveMake\IMigrateMakeCommand;
+use Mirhamzah\LaravelInteractiveMake\Commands\IModelMakeCommand;
+use Mirhamzah\LaravelInteractiveMake\Commands\IMigrateMakeCommand;
 
 
 class LaravelInteractiveCommandProvider extends ServiceProvider
