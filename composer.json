@@ -1,6 +1,7 @@
 {
     "name": "mirhamzah/laravel-interactive-make",
     "description": "Interactive make commands for making Model and Migration with fields",
+    "keywords": ["laravel", "command"],
     "autoload": {
         "psr-4": {
             "Mirhamzah\\LaravelInteractiveMake\\": "src/"

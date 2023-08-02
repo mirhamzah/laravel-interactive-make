@@ -13,3 +13,5 @@ Or
 php artisan make:imodel ModelName -m
 ```
 for making a new migration as well, just like with normal make:model command.
+
+![Screenshot](images/screenshot.png)
