@@ -6,5 +6,12 @@
             "Mirhamzah\\LaravelInteractiveMake\\": "src/"
         }
     },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Mirhamzah\\LaravelInteractiveMake\\LaravelInteractiveCommandProvider"
+            ]
+        }
+    },
     "require": {}
 }
