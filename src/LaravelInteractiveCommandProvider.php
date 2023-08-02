@@ -3,7 +3,7 @@
 namespace Mirhamzah\LaravelInteractiveMake;
 
 use Illuminate\Support\ServiceProvider;
-use Mirhamzah\LaravelInteractiveMake\IMigrateMakeCommand;
+use Mirhamzah\LaravelInteractiveMake\IModelMakeCommand;
 use Mirhamzah\LaravelInteractiveMake\IMigrateMakeCommand;
 
 
@@ -17,7 +17,7 @@ class LaravelInteractiveCommandProvider extends ServiceProvider
     public function register()
     {
         $this->commands([
-            IMigrateMakeCommand::class,
+            IModelMakeCommand::class,
             IMigrateMakeCommand::class
         ]);
     }
