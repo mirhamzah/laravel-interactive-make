@@ -44,12 +44,70 @@ class IModelMakeCommand extends ModelMakeCommand
                 break;
             }
 
-            $type = $this->choice('Select the field type:', ['string', 'integer', 'boolean', 'text', 'date', 'float']);
+            $type = $this->choice('Select the field type:', [
+                'string', 
+                'integer', 
+                'boolean', 
+                'text', 
+                'date', 
+                'float'
+            ], $this->suggestFieldType($name));
 
             $this->fillable[] = compact('name', 'type');
         }
 
         parent::handle();
+
+    }
+
+    /**
+     * Suggest field type for given field name
+     *
+     * @return string
+     */
+    protected function suggestFieldType($name)
+    {
+
+        $fields = [
+            'string' => [
+                'title',
+                'name',
+                'username',
+                'image',
+                'url',
+                'phone'
+            ],
+            'text' => [
+                'body',
+                'content',
+                'text'
+            ],
+            'boolean' => [
+                'status',
+                'active',
+                'deleted'
+            ],
+            'date' => [
+                'birthdate',
+                'dob'
+            ],
+            'integer' => [
+                'quantity'
+            ],
+            'float' => [
+                'price'
+            ]
+        ];
+
+        foreach ($fields as $type => $names) {
+
+            if (in_array($name, $names)) {
+                return $type;
+            }
+
+        }
+
+        return NULL;
 
     }
 
@@ -130,43 +188,4 @@ class IModelMakeCommand extends ModelMakeCommand
         ]);
     }
 
-    public function handleOld()
-    {
-        $name = $this->ask('Enter the name of the model (e.g., Post):');
-        $tableName = $this->ask('Enter the table name (optional, default will be used if empty):');
-
-        $fields = [];
-        while (true) {
-            $fieldName = $this->ask('Enter the field name (or type "exit" to finish):');
-            if ($fieldName === 'exit') {
-                break;
-            }
-
-            $fieldType = $this->choice('Select the field type:', ['string', 'integer', 'boolean', 'text', 'date', 'float']);
-
-            $fields[] = compact('fieldName', 'fieldType');
-        }
-
-        // Create migration
-        $migrationName = 'create_' . strtolower($name) . 's_table';
-        $this->call('make:migration', [
-            'name' => $migrationName,
-            '--create' => $tableName ?? strtolower($name) . 's',
-        ]);
-
-        // Generate model
-        $this->call('make:model', [
-            'name' => $name,
-        ]);
-
-        // Fill model with fillable fields
-        $fillableFields = implode(',', array_column($fields, 'fieldName'));
-        $modelFilePath = app_path("Models/{$name}.php");
-        $modelFileContents = $this->files->get($modelFilePath);
-        $fillableReplacement = "protected \$fillable = [{$fillableFields}];";
-        $modelFileContents = str_replace('protected $fillable = [];', $fillableReplacement, $modelFileContents);
-        $this->files->put($modelFilePath, $modelFileContents);
-
-        $this->info("Model {$name} created successfully with migration and fillable fields.");
-    }
 }
