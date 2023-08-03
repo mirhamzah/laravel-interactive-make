@@ -13,6 +13,7 @@ use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
+use Illuminate\Support\Facades\Blade;
 
 
 #[AsCommand(name: 'make:imodel')]
@@ -35,7 +36,27 @@ class IModelMakeCommand extends ModelMakeCommand
 
     protected $fillable = [];
 
+    protected $relationships = [];
+
     public function handle()
+    {
+
+        $this->handleFillableFields();
+
+        $result = $this->choice('Do you want to add relationships?', [
+            'yes',
+            'no'
+        ], 'yes');
+
+        if ($result == 'yes') {
+            $this->handleRelationshipFields();
+        }
+
+        parent::handle();
+
+    }
+
+    private function handleFillableFields()
     {
 
         while (true) {
@@ -46,17 +67,38 @@ class IModelMakeCommand extends ModelMakeCommand
 
             $type = $this->choice('Select the field type:', [
                 'string', 
-                'integer', 
-                'boolean', 
                 'text', 
+                'integer', 
+                'float',
+                'boolean', 
                 'date', 
-                'float'
+                'dateTime',
+                'timestamp'
             ], $this->suggestFieldType($name));
 
             $this->fillable[] = compact('name', 'type');
         }
 
-        parent::handle();
+    }
+
+    private function handleRelationshipFields()
+    {
+
+        while (true) {
+            $name = $this->ask('Enter Model name (or press ENTER to finish):');
+            if ($name == '') {
+                break;
+            }
+
+            $type = $this->choice('Select relationship type:', [
+                'HasOne', 
+                'HasMany', 
+                'BelongsTo'
+            ], NULL);
+
+            $this->relationships[$name] = $type;
+
+        }
 
     }
 
@@ -65,8 +107,10 @@ class IModelMakeCommand extends ModelMakeCommand
      *
      * @return string
      */
-    protected function suggestFieldType($name)
+    protected function suggestFieldType($field_name)
     {
+
+        $field_name = strtolower($field_name);
 
         $fields = [
             'string' => [
@@ -75,61 +119,95 @@ class IModelMakeCommand extends ModelMakeCommand
                 'username',
                 'image',
                 'url',
-                'phone'
+                'phone',
+                'city',
+                'state',
+                'region',
+                'county',
+                'token',
+                'postcode'
             ],
             'text' => [
                 'body',
                 'content',
-                'text'
+                'text',
+                'description'
             ],
             'boolean' => [
                 'status',
                 'active',
-                'deleted'
+                'deleted',
+                'is_'
             ],
             'date' => [
                 'birthdate',
-                'dob'
+                'dob',
+                'date'
+            ],
+            'timestamp' => [
+                'created',
+                'updated',
+                '_at'
             ],
             'integer' => [
-                'quantity'
+                'quantity',
+                'qty',
+                'count',
+                'rating',
+                '_id'
             ],
             'float' => [
-                'price'
+                'price',
+                'weight',
+                'length',
+                'width',
+                'height'
             ]
         ];
 
         foreach ($fields as $type => $names) {
 
-            if (in_array($name, $names)) {
+            if (in_array($field_name, $names)) {
                 return $type;
             }
 
         }
 
-        return NULL;
+        // if it couldn't find exact match, try finding a partial match
+        foreach ($fields as $type => $names) {
+
+            foreach ($names as $name) {
+                if (strstr($field_name, $name)) {
+                    return $type;
+                }
+            }
+
+        }
+
+        // returning string, as it is most commonly used.
+        return 'string';
 
     }
 
     /**
-     * Get the stub file for the generator.
+     * Get the view file for the generator.
      *
      * @return string
      */
-    protected function getStub()
+    protected function getView()
     {
-        return $this->resolveStubPath('/stubs/model.stub');
+        return $this->resolveViewPath('/views/model.blade.php');
     }
 
     /**
-     * Resolve the fully-qualified path to the stub.
+     * Resolve the fully-qualified path to the view.
      *
-     * @param  string  $stub
+     * @param  string  $view
      * @return string
      */
-    protected function resolveStubPath($stub)
+    protected function resolveViewPath($view)
     {
-        return __DIR__.$stub;
+        return __DIR__.$view;
     }
 
     /**
@@ -142,28 +220,16 @@ class IModelMakeCommand extends ModelMakeCommand
      */
     protected function buildClass($name)
     {
-        $stub = $this->files->get($this->getStub());
 
-        $stub = $this->replaceFillable($stub);
+        $view = $this->files->get($this->getView());
 
-        return $this->replaceNamespace($stub, $name)->replaceClass($stub, $name);
-    }
+        $output = Blade::render($view, [
+            'class' => $name,
+            'fillables' => $this->fillable,
+            'relationships' => $this->relationships
+        ], deleteCachedView: true);
 
-    /**
-     * Replace the fillables for the given stub.
-     *
-     * @param  string  $stub
-     * @param  string  $name
-     * @return string
-     */
-    protected function replaceFillable($stub)
-    {
-
-        if (count($this->fillable)) {
-
-            $fields = "'" . implode("', '", array_column($this->fillable, 'name')) . "'";
-            return str_replace(['{{ fillable }}', '{{fillable}}'], $fields, $stub);
-        }
+        return str_replace('@php', '<?php', $output);
 
     }
 
@@ -184,6 +250,7 @@ class IModelMakeCommand extends ModelMakeCommand
             'name' => "create_{$table}_table",
             '--create' => $table,
             '--fields' => $this->fillable,
+            '--relationships' => $this->relationships,
             '--fullpath' => false,
         ]);
     }

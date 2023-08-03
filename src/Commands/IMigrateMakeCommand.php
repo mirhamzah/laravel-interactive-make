@@ -5,6 +5,7 @@ namespace Mirhamzah\LaravelInteractiveMake\Commands;
 use Illuminate\Console\GeneratorCommand;
 use Illuminate\Database\Console\Migrations\TableGuesser;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Blade;
 
 class IMigrateMakeCommand extends GeneratorCommand
 {
@@ -17,6 +18,7 @@ class IMigrateMakeCommand extends GeneratorCommand
         {--create= : The table to be created}
         {--table= : The table to migrate}
         {--fields= : The fields for table}
+        {--relationships= : The relationships for this table}
         {--path= : The location where the migration file should be created}
         {--realpath : Indicate any provided migration file paths are pre-resolved absolute paths}
         {--fullpath : Output the full path of the migration (Deprecated)}';
@@ -42,6 +44,8 @@ class IMigrateMakeCommand extends GeneratorCommand
 
         $fields = $this->input->getOption('fields');
 
+        $relationships = $this->input->getOption('relationships') ?: [];
+
         $create = $this->input->getOption('create') ?: false;
 
         // If no table was given as an option but a create option is given then we
@@ -63,15 +67,26 @@ class IMigrateMakeCommand extends GeneratorCommand
         // Now we are ready to write the migration out to disk. Once we've written
         // the migration out, we will dump-autoload for the entire framework to
         // make sure that the migrations are registered by the class loaders.
-        $stub = $this->files->get($this->getStub());
+        $view = $this->files->get($this->getStub());
 
-        $file = $this->getPath($name);
+        $filename = $this->getPath($name);
+
+        $output = Blade::render($view, [
+            'table' => $table,
+            'fields' => $fields,
+            'relationships' => $relationships
+        ], deleteCachedView: true);
 
         $this->files->put(
-            $file, $this->populateStub($stub, $table, $fields)
+            $filename, str_replace('@php', '<?php', $output)
         );
 
-        $this->components->info(sprintf('Migration [%s] created successfully.', $file));
+/*
+        $this->files->put(
+            $filename, $this->populateStub($stub, $table, $fields)
+        );
+*/
+        $this->components->info(sprintf('Migration [%s] created successfully.', $filename));
 
     }
 
@@ -142,24 +157,24 @@ class IMigrateMakeCommand extends GeneratorCommand
     }
 
     /**
-     * Get the stub file for the generator.
+     * Get the view file for the generator.
      *
      * @return string
      */
     protected function getStub()
     {
-        return $this->resolveStubPath('/stubs/migration.create.stub');
+        return $this->resolveViewPath('/views/migration.create.blade.php');
     }
 
     /**
-     * Resolve the fully-qualified path to the stub.
+     * Resolve the fully-qualified path to the view.
      *
-     * @param  string  $stub
+     * @param  string  $view
      * @return string
      */
-    protected function resolveStubPath($stub)
+    protected function resolveViewPath($view)
     {
-        return __DIR__.$stub;
+        return __DIR__.$view;
     }
 
 }
