@@ -4,13 +4,13 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-@if (in_array('HasOne', $relationships))
+@if (in_array('HasOne', array_column($relationships, 'type')))
 use Illuminate\Database\Eloquent\Relations\HasOne;
 @endif
-@if (in_array('HasMany', $relationships))
+@if (in_array('HasMany', array_column($relationships, 'type')))
 use Illuminate\Database\Eloquent\Relations\HasMany;
 @endif
-@if (in_array('BelongsTo', $relationships))
+@if (in_array('BelongsTo', array_column($relationships, 'type')))
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 @endif
 
@@ -29,26 +29,26 @@ class {{ $class }} extends Model
     ];
 @endif
 
-@foreach ($relationships as $model => $type)
-@switch($type)
+@foreach ($relationships as $name => $model)
+@switch($model['type'])
     @case('HasOne')
-    public function {{ strtolower($model) }}(): HasOne
+    public function {{ strtolower($name) }}(): HasOne
     {
-        return $this->hasOne({{ $model }}::class);
+        return $this->hasOne({{ $name }}::class);
     }
     @break
  
     @case('HasMany')
-    public function {{ strtolower($model) }}(): HasMany
+    public function {{ strtolower($model['field_name_plural']) }}(): HasMany
     {
-        return $this->hasMany({{ $model }}::class);
+        return $this->hasMany({{ $name }}::class);
     }
     @break
  
     @case('BelongsTo')
-    public function {{ strtolower($model) }}(): BelongsTo
+    public function {{ strtolower($name) }}(): BelongsTo
     {
-        return $this->belongsTo({{ $model }}::class);
+        return $this->belongsTo({{ $name }}::class);
     }
     @break
 

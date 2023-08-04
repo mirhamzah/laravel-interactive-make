@@ -15,7 +15,6 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Illuminate\Support\Facades\Blade;
 
-
 #[AsCommand(name: 'make:imodel')]
 class IModelMakeCommand extends ModelMakeCommand
 {
@@ -38,12 +37,16 @@ class IModelMakeCommand extends ModelMakeCommand
 
     protected $relationships = [];
 
+    protected $models = [];
+
     public function handle()
     {
 
+        $this->loadModels();
+
         $this->handleFillableFields();
 
-        $result = $this->choice('Do you want to add relationships?', [
+        $result = $this->choice('Do you want to add (more) relationships?', [
             'yes',
             'no'
         ], 'yes');
@@ -63,6 +66,12 @@ class IModelMakeCommand extends ModelMakeCommand
             $name = $this->ask('Enter the field name (or press ENTER to finish):');
             if ($name == '') {
                 break;
+            }
+
+            if (str_ends_with($name, '_id')) {
+                if ($this->handleRelationshipField($name)) {
+                    continue;
+                }
             }
 
             $type = $this->choice('Select the field type:', [
@@ -91,12 +100,16 @@ class IModelMakeCommand extends ModelMakeCommand
             }
 
             $type = $this->choice('Select relationship type:', [
-                'HasOne', 
-                'HasMany', 
+                'HasMany',
                 'BelongsTo'
-            ], NULL);
+            ], 'HasMany');
 
-            $this->relationships[$name] = $type;
+            $this->relationships[$name] = [
+                'field_name' => strtolower($name),
+                'field_name_plural' => Str::plural($name),
+                'type' => $type,
+                'table' => $this->models[strtolower($name)] ?? $name
+            ];
 
         }
 
@@ -113,6 +126,19 @@ class IModelMakeCommand extends ModelMakeCommand
         $field_name = strtolower($field_name);
 
         $fields = [
+            'integer' => [
+                'quantity',
+                'qty',
+                'count',
+                'rating',
+                '_id'
+            ],
+            'boolean' => [
+                'status',
+                'active',
+                'deleted',
+                'is_'
+            ],
             'string' => [
                 'title',
                 'name',
@@ -133,12 +159,6 @@ class IModelMakeCommand extends ModelMakeCommand
                 'text',
                 'description'
             ],
-            'boolean' => [
-                'status',
-                'active',
-                'deleted',
-                'is_'
-            ],
             'date' => [
                 'birthdate',
                 'dob',
@@ -148,13 +168,6 @@ class IModelMakeCommand extends ModelMakeCommand
                 'created',
                 'updated',
                 '_at'
-            ],
-            'integer' => [
-                'quantity',
-                'qty',
-                'count',
-                'rating',
-                '_id'
             ],
             'float' => [
                 'price',
@@ -186,6 +199,49 @@ class IModelMakeCommand extends ModelMakeCommand
 
         // returning string, as it is most commonly used.
         return 'string';
+
+    }
+
+    protected function handleRelationshipField($field_name)
+    {
+
+        $field_name = strtolower(str_replace('_id', '', $field_name));
+
+        if (isset($this->models[$field_name])) {
+            $model = $this->models[$field_name]['name'];
+            $response = $this->choice("Create a HasOne relationship with $model?", [
+                'yes', 
+                'no', 
+            ], 'yes');
+
+            if ($response == 'yes') {
+                $this->relationships[$model] = [
+                    'field_name' => $field_name,
+                    'field_name_plural' => Str::plural($field_name),
+                    'type' => 'HasOne',
+                    'table' => $this->models[$field_name]['table']
+                ];
+                return true;
+            }
+
+        }
+
+        return false;
+
+    }
+
+    protected function loadModels()
+    {
+
+        $models_path = app_path('Models');
+        $model_files = $this->files->allFiles($models_path);
+        foreach ($model_files as $model_file) {
+            $model_name = $model_file->getFilenameWithoutExtension();
+            $this->models[strtolower($model_name)] = [
+                'name' => $model_name,
+                'table' => app("\\App\\Models\\$model_name")->getTable()
+            ];
+        }
 
     }
 
@@ -223,8 +279,10 @@ class IModelMakeCommand extends ModelMakeCommand
 
         $view = $this->files->get($this->getView());
 
+        $class = preg_replace('/.*\\\\([\w]+)/', '$1', $name);
+
         $output = Blade::render($view, [
-            'class' => $name,
+            'class' => $class,
             'fillables' => $this->fillable,
             'relationships' => $this->relationships
         ], deleteCachedView: true);

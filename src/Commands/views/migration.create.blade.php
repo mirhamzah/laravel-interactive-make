@@ -25,6 +25,12 @@ return new class extends Migration
 @endswitch
 @endforeach
 
+@foreach ($relationships as $key => $relationship)
+@if ($relationship['type'] == 'HasOne')
+            $table->foreign('{{ $relationship['field_name'] }}_id')->references('id')->on('{{ $relationship['table'] }}');
+@endif
+@endforeach
+
         });
     }
 
