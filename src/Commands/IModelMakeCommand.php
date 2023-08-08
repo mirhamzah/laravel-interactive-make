@@ -37,10 +37,14 @@ class IModelMakeCommand extends ModelMakeCommand
 
     protected $relationships = [];
 
+    protected $modelName;
+
     protected $models = [];
 
     public function handle()
     {
+
+        $this->modelName = Str::studly($this->argument('name'));
 
         $this->loadModels();
 
@@ -202,6 +206,20 @@ class IModelMakeCommand extends ModelMakeCommand
 
     }
 
+    /**
+     * Handles relationship field.
+     * Could be either HasOne or BelongsTo.
+     * Can't be OneToMany, _id is always saved in Many table, not One.
+     * If model is already referenced, it is BelongsTo.
+     * Else, it is HasOne.
+     * E.g: field user_id
+     * If User aleady has OneToMany relationship with current model,
+     * You'd just need inverse relationship here.
+     * If User doesn't have OneToMany, then it'd be HasOne.
+     * 
+     * @param  string  $field_name
+     * @return boolean
+     */
     protected function handleRelationshipField($field_name)
     {
 
@@ -209,16 +227,18 @@ class IModelMakeCommand extends ModelMakeCommand
 
         if (isset($this->models[$field_name])) {
             $model = $this->models[$field_name]['name'];
-            $response = $this->choice("Create a HasOne relationship with $model?", [
-                'yes', 
-                'no', 
-            ], 'yes');
+            $default = $this->relationshipExists($field_name, 'HasMany') ? 'BelongsTo' : 'HasOne';
+            $type = $this->choice("Create a relationship with $model?", [
+                'HasOne', 
+                'BelongsTo', 
+                'None'
+            ], $default);
 
-            if ($response == 'yes') {
+            if ($type != 'None') {
                 $this->relationships[$model] = [
                     'field_name' => $field_name,
                     'field_name_plural' => Str::plural($field_name),
-                    'type' => 'HasOne',
+                    'type' => $type,
                     'table' => $this->models[$field_name]['table']
                 ];
                 return true;
@@ -230,6 +250,11 @@ class IModelMakeCommand extends ModelMakeCommand
 
     }
 
+    protected function relationshipExists($model, $type)
+    {
+        return $this->models[$model][$type];
+    }
+
     protected function loadModels()
     {
 
@@ -239,7 +264,9 @@ class IModelMakeCommand extends ModelMakeCommand
             $model_name = $model_file->getFilenameWithoutExtension();
             $this->models[strtolower($model_name)] = [
                 'name' => $model_name,
-                'table' => app("\\App\\Models\\$model_name")->getTable()
+                'table' => app("\\App\\Models\\$model_name")->getTable(),
+                'HasMany' => method_exists("\\App\\Models\\$model_name", Str::plural(strtolower($this->modelName))),
+                'HasOne' => method_exists("\\App\\Models\\$model_name", strtolower($this->modelName))
             ];
         }
 
