@@ -5,6 +5,7 @@ namespace Mirhamzah\LaravelInteractiveMake;
 use Illuminate\Support\ServiceProvider;
 use Mirhamzah\LaravelInteractiveMake\Commands\IModelMakeCommand;
 use Mirhamzah\LaravelInteractiveMake\Commands\IMigrateMakeCommand;
+use Mirhamzah\LaravelInteractiveMake\Commands\MakeRelationshipCommand;
 
 
 class LaravelInteractiveCommandProvider extends ServiceProvider
@@ -18,7 +19,8 @@ class LaravelInteractiveCommandProvider extends ServiceProvider
     {
         $this->commands([
             IModelMakeCommand::class,
-            IMigrateMakeCommand::class
+            IMigrateMakeCommand::class,
+            MakeRelationshipCommand::class
         ]);
     }
 }
