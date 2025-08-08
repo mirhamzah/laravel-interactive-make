@@ -33,3 +33,9 @@ public function articles(): ?HasMany
     return $this->hasMany(Article::class);
 }
 ```
+
+```shell
+php artisan make:iview ModelName
+```
+
+The `make:iview` command generates view components for the specified model. It creates two files, `create.jsx` and `edit.jsx`, which are React components designed for creating and editing instances of the model. These components are automatically populated with form fields based on the `$fillable` and `$casts` properties defined in the model class, ensuring consistency between the model and its associated views.
